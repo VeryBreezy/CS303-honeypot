@@ -48,13 +48,13 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             password = creds.get("pass", [""])[0]
 
             # Log ALL attempts
-            with open("creds.txt", "a") as log:
+            with open("logs.txt", "a") as log:
                 log.write(f"Username: {username} Password: {password}\n")
             print(username)
             print(password)
             # Check against allowed credentials
             authenticated = False
-            with open("login.txt", "r") as auth_file:
+            with open("true_login.txt", "r") as auth_file:
                 for line in auth_file:
                     stored_user, stored_pass = line.strip().split(":")
                     if username == stored_user and password == stored_pass:
