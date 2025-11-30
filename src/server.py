@@ -34,7 +34,12 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(b"<h2>ACCESS DENIED</h2><p>Suspicious behavior detected.</p>")
-
+        elif self.path == "/accepted.html":
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            with open("accepted.html", "rb") as file:
+                self.wfile.write(file.read())
         else:
             self.send_error(404)
 
@@ -66,7 +71,8 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
             if authenticated:
-                self.wfile.write(b"<h2>Welcome!</h2><p>Valid login.</p>")
+                with open("accepted.html", "rb") as success:
+                    self.wfile.write(success.read())
             else:
                 with open("access_denied.html", "rb") as f:
                     self.wfile.write(f.read())
