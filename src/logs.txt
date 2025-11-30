@@ -67,3 +67,5 @@ IP: 192.168.1.125, MAC: None, Username: asdfdafsfasdf\, Password:
 Username: asdfdafsfasdf\ Password: 
 IP: 192.168.1.247, MAC: ae:a1:28:88:7c:55, Username: rfafsdfasd, Password: 
 Username: rfafsdfasd Password: 
+IP: 192.168.1.247, MAC: ae:a1:28:88:7c:55, Username: rfafsdfasd, Password: 
+Username: rfafsdfasd Password: 
