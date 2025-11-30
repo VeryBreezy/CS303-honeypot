@@ -33,20 +33,30 @@ class HoneypotHandler(BaseHTTPRequestHandler):
         if "username=" in cookies:
             username = cookies.split("username=")[1].split(";")[0]
 
-        print(f"GET path={clean_path} | User={username} | IP={client_ip} | MAC={client_mac}")
+        print(f"GET path={clean_path} IP={client_ip} | MAC={client_mac}")
 
         if clean_path == "/" or clean_path == "/fake_website.html":
             self.serve_file("fake_website.html")
 
         elif clean_path == "/account":
-            if username and self.check_identity(username, client_ip, client_mac):
+            cookie_header = self.headers.get('Cookie', '')
+            username = ""
+            if 'username=' in cookie_header:
+                username = cookie_header.split("username=")[1].split(";")[0]
+
+            print(f"ACCOUNT ACCESS → User={username}, IP={client_ip}, MAC={client_mac}")
+
+            if not username:
+                # No cookie → not logged in
+                self.serve_file("access_denied.html")
+                return
+
+            if self.check_identity(username, client_ip, client_mac):
                 print("✔ Real user — showing account image")
                 self.serve_file("account_picture.png", "image/png")
-            elif username:
+            else:
                 print("⚠ Suspicious identity — stolen credentials")
                 self.serve_file("suspicious.html")
-            else:
-                self.serve_file("access_denied.html")
 
         elif clean_path == "/accepted.html":
             self.serve_file("accepted.html")
