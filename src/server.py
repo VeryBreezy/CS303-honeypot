@@ -82,7 +82,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             client_ip = self.client_address[0]
             client_mac = get_mac_from_ip(client_ip)
 
-            print(f"LOGIN ATTEMPT: {username} IP={client_ip} MAC={client_mac}")
+            print(f"LOGIN ATTEMPT: User={username} Password={password} IP={client_ip} MAC={client_mac}")
 
             authenticated = False
             mac_match = False
