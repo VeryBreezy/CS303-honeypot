@@ -5,9 +5,8 @@ import time
 
 def get_mac_from_ip(ip):
     subprocess.getoutput(f"ping -c 1 -W 1 {ip}")
-    time.sleep(0.2)
+    time.sleep(0.1)
     arp_output = subprocess.getoutput(f"arp -n {ip}")
-    
     for part in arp_output.split():
         if ":" in part and len(part) == 17:
             return part.lower()
@@ -18,7 +17,6 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
     def serve_file(self, filename, content_type="text/html"):
         with open(filename, "rb") as f:
-            self.send_response(200)
             self.send_header("Content-type", content_type)
             self.end_headers()
             self.wfile.write(f.read())
@@ -30,29 +28,37 @@ class HoneypotHandler(BaseHTTPRequestHandler):
         print(f"GET {clean_path} | Cookie={cookies}")
 
         if clean_path == "/" or clean_path == "/fake_website.html":
+            self.send_response(200)
             self.serve_file("fake_website.html")
+
+        elif clean_path == "/accepted.html":
+            self.send_response(200)
+            self.serve_file("accepted.html")
 
         elif clean_path == "/account":
             if "session=valid" in cookies:
-                print("✔ Real session — show picture")
+                print("✔ Victim checked account → Showing picture")
+                self.send_response(200)
                 self.serve_file("account_picture.png", "image/png")
             elif "session=suspicious" in cookies:
-                print("⚠ Suspicious session — stolen credentials")
+                print("⚠ Attacker checked account → Suspicious alert!!")
+                self.send_response(200)
                 self.serve_file("suspicious.html")
             else:
-                print("❌ No login session — deny")
+                print("❌ No cookie, not logged in")
+                self.send_response(200)
                 self.serve_file("access_denied.html")
 
-        elif clean_path == "/accepted.html":
-            self.serve_file("accepted.html")
-
         elif clean_path == "/suspicious.html":
+            self.send_response(200)
             self.serve_file("suspicious.html")
 
         elif clean_path == "/access_denied.html":
+            self.send_response(200)
             self.serve_file("access_denied.html")
 
         elif clean_path == "/access_denied.png":
+            self.send_response(200)
             self.serve_file("access_denied.png", "image/png")
 
         else:
@@ -61,35 +67,32 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/login":
-            content_length = int(self.headers["Content-Length"])
-            post_data = self.rfile.read(content_length)
-            creds = urllib.parse.parse_qs(post_data.decode("utf-8"))
+            length = int(self.headers["Content-Length"])
+            creds = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
 
             username = creds.get("user", [""])[0]
             password = creds.get("pass", [""])[0]
             client_ip = self.client_address[0]
             client_mac = get_mac_from_ip(client_ip)
 
-            print(f"\n=== LOGIN ATTEMPT ===")
-            print(f"User={username} Pass={password}")
-            print(f"IP={client_ip}  MAC={client_mac}")
+            print(f"\n=== LOGIN === {username} | IP={client_ip} | MAC={client_mac}")
 
             authenticated = False
-            is_victim_device = False
+            is_real_victim = False
 
-            with open("true_login.txt", "r") as auth_file:
-                for line in auth_file:
+            with open("true_login.txt", "r") as auth:
+                for line in auth:
                     u, p, ip, mac = line.strip().split(";")
                     if username == u and password == p:
                         authenticated = True
-                        is_victim_device = (client_ip == ip and client_mac == mac)
+                        is_real_victim = (client_ip == ip and client_mac == mac)
                         break
 
             if authenticated:
-                session = "valid" if is_victim_device else "suspicious"
+                session = "valid" if is_real_victim else "suspicious"
+                print(f"SESSION FLAG: {session}")
 
-                print(f"SESSION TYPE: {session}")
-
+                # 302 redirect after setting cookie
                 self.send_response(302)
                 self.send_header("Set-Cookie", f"username={username}; Path=/")
                 self.send_header("Set-Cookie", f"session={session}; Path=/")
@@ -97,7 +100,8 @@ class HoneypotHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
             else:
-                print("❌ Invalid login")
+                print("❌ BAD LOGIN")
+                self.send_response(200)
                 self.serve_file("access_denied.html")
         else:
             self.send_error(404)
