@@ -29,15 +29,17 @@ class HoneypotHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         print("GET path:", self.path)
 
-        if self.path == "/" or self.path == "/fake_website.html":
+        clean_path = self.path.split("?")[0]  # Remove everything after ?
+
+        if clean_path == "/" or clean_path == "/fake_website.html":
             self.serve_file("fake_website.html")
-        elif self.path == "/accepted.html":
+        elif clean_path == "/accepted.html":
             self.serve_file("accepted.html")
-        elif self.path == "/access_denied.html":
+        elif clean_path == "/access_denied.html":
             self.serve_file("access_denied.html")
-        elif self.path == "/suspicious.html":
+        elif clean_path == "/suspicious.html":
             self.serve_file("suspicious.html")
-        elif self.path == "/access_denied.png":
+        elif clean_path == "/access_denied.png":
             self.serve_file("access_denied.png", "image/png")
         else:
             self.send_error(404)
@@ -67,7 +69,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
             with open("true_login.txt", "r") as auth_file:
                 for line in auth_file:
-                    stored_user, stored_pass, stored_ip, stored_mac = line.strip().split(":")
+                    stored_user, stored_pass, stored_ip, stored_mac = line.strip().split(";")
                     if username == stored_user and password == stored_pass:
                         authenticated = True
                         if client_ip == stored_ip and client_mac == stored_mac:
