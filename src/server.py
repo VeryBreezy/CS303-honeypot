@@ -25,38 +25,23 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         clean_path = self.path.split("?")[0]
-        client_ip = self.client_address[0]
-        client_mac = get_mac_from_ip(client_ip)
-
         cookies = self.headers.get("Cookie", "")
-        username = ""
-        if "username=" in cookies:
-            username = cookies.split("username=")[1].split(";")[0]
 
-        print(f"GET path={clean_path} IP={client_ip} | MAC={client_mac}")
+        print(f"GET {clean_path} | Cookie={cookies}")
 
         if clean_path == "/" or clean_path == "/fake_website.html":
             self.serve_file("fake_website.html")
 
         elif clean_path == "/account":
-            cookie_header = self.headers.get('Cookie', '')
-            username = ""
-            if 'username=' in cookie_header:
-                username = cookie_header.split("username=")[1].split(";")[0]
-
-            print(f"ACCOUNT ACCESS → User={username}, IP={client_ip}, MAC={client_mac}")
-
-            if not username:
-                # No cookie → not logged in
-                self.serve_file("access_denied.html")
-                return
-
-            if self.check_identity(username, client_ip, client_mac):
-                print("✔ Real user — showing account image")
+            if "session=valid" in cookies:
+                print("✔ Real session — show picture")
                 self.serve_file("account_picture.png", "image/png")
-            else:
-                print("⚠ Suspicious identity — stolen credentials")
+            elif "session=suspicious" in cookies:
+                print("⚠ Suspicious session — stolen credentials")
                 self.serve_file("suspicious.html")
+            else:
+                print("❌ No login session — deny")
+                self.serve_file("access_denied.html")
 
         elif clean_path == "/accepted.html":
             self.serve_file("accepted.html")
@@ -73,13 +58,6 @@ class HoneypotHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def check_identity(self, username, client_ip, client_mac):
-        with open("true_login.txt", "r") as auth_file:
-            for line in auth_file:
-                stored_user, stored_pass, stored_ip, stored_mac = line.strip().split(";")
-                if username == stored_user:
-                    return (client_ip == stored_ip and client_mac == stored_mac)
-        return False
 
     def do_POST(self):
         if self.path == "/login":
@@ -92,23 +70,29 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             client_ip = self.client_address[0]
             client_mac = get_mac_from_ip(client_ip)
 
-            print(f"LOGIN ATTEMPT: User={username} Password={password} IP={client_ip} MAC={client_mac}")
+            print(f"\n=== LOGIN ATTEMPT ===")
+            print(f"User={username} Pass={password}")
+            print(f"IP={client_ip}  MAC={client_mac}")
 
             authenticated = False
-            mac_match = False
+            is_victim_device = False
 
             with open("true_login.txt", "r") as auth_file:
                 for line in auth_file:
-                    stored_user, stored_pass, stored_ip, stored_mac = line.strip().split(";")
-                    if username == stored_user and password == stored_pass:
+                    u, p, ip, mac = line.strip().split(";")
+                    if username == u and password == p:
                         authenticated = True
-                        mac_match = (client_ip == stored_ip and client_mac == stored_mac)
+                        is_victim_device = (client_ip == ip and client_mac == mac)
                         break
 
             if authenticated:
+                session = "valid" if is_victim_device else "suspicious"
+
+                print(f"SESSION TYPE: {session}")
+
                 self.send_response(302)
-                self.send_header("Content-type", "text/html")
                 self.send_header("Set-Cookie", f"username={username}; Path=/")
+                self.send_header("Set-Cookie", f"session={session}; Path=/")
                 self.send_header("Location", "/accepted.html")
                 self.end_headers()
 
