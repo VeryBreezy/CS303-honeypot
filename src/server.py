@@ -1,14 +1,21 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.parse
 import subprocess
-
+import time
 #The imports are based on what we need for the server to work on http for the class
 #This is what holds the server for the fake_website html to be able to do requests and answer them.
 def get_mac_from_ip(ip):
-    result = subprocess.getoutput(f"arp -n {ip}")
-    fields = result.split()
-    if len(fields) > 2:
-        return fields[2]  # MAC address
+    # Force ARP request first
+    subprocess.getoutput(f"ping -c 1 -W 1 {ip}")
+    time.sleep(0.2)
+
+    arp_output = subprocess.getoutput(f"arp -n {ip}")
+    print("ARP cmd output:", arp_output)  # debug shown in console
+    
+    parts = arp_output.split()
+    for part in parts:
+        if ":" in part and len(part) == 17:
+            return part.lower()
     return None
 
 print("Beginning server start")
@@ -58,7 +65,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
             #Get client information (IP + MAC)
             client_ip = self.client_address[0]
-            client_mac = get_mac_from_ip(client_ip)
+            client_mac = get_mac_from_ip(client_ip) or "Unknown"
 
             print("Client IP:", client_ip)
             print("Client MAC:", client_mac)
