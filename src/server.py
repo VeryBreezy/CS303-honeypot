@@ -1,8 +1,15 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.parse
+import subprocess
 
 #The imports are based on what we need for the server to work on http for the class
 #This is what holds the server for the fake_website html to be able to do requests and answer them.
+def get_mac_from_ip(ip):
+    result = subprocess.getoutput(f"arp -n {ip}")
+    fields = result.split()
+    if len(fields) > 2:
+        return fields[2]  # MAC address
+    return None
 
 print("Beginning server start")
 class HoneypotHandler(BaseHTTPRequestHandler):
@@ -49,8 +56,18 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             creds = urllib.parse.parse_qs(post_data.decode('utf-8'))
 
+            #Get client information (IP + MAC)
+            client_ip = self.client_address[0]
+            client_mac = get_mac_from_ip(client_ip)
+
+            print("Client IP:", client_ip)
+            print("Client MAC:", client_mac)
+
             username = creds.get("user", [""])[0]
             password = creds.get("pass", [""])[0]
+
+            with open("logs.txt", "a") as log:
+                log.write(f"IP: {client_ip}, MAC: {client_mac}, Username: {username}, Password: {password}\n")
 
             # Log ALL attempts
             with open("logs.txt", "a") as log:
