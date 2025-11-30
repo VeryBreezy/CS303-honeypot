@@ -41,6 +41,8 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             self.serve_file("suspicious.html")
         elif clean_path == "/access_denied.png":
             self.serve_file("access_denied.png", "image/png")
+        elif clean_path == "/fake_accepted.html":
+            self.serve_file("fake_accepted.html")
         else:
             self.send_error(404)
 
@@ -77,15 +79,15 @@ class HoneypotHandler(BaseHTTPRequestHandler):
                         break
 
             if authenticated and mac_match:
-                print("✔ Legit login — Correct identity")
+                print("Legit login — Correct identity")
                 self.serve_file("accepted.html")
 
             elif authenticated and not mac_match:
-                print("⚠ STOLEN CREDENTIALS DETECTED — Wrong device")
-                self.serve_file("suspicious.html")
+                print("STOLEN CREDENTIALS DETECTED — Wrong device")
+                self.serve_file("fake_accepted.html")
 
             else:
-                print("❌ Invalid login attempt")
+                print("Invalid login attempt")
                 self.serve_file("access_denied.html")
 
         else:
