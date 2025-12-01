@@ -40,7 +40,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
         elif clean_path == "/account":
             if "session=valid" in cookies:
-                print("✔ Victim checking account, show picture")
+                print("Victim checking account, show picture")
                 self.send_response(200)
                 self.serve_file("account_picture.png", "image/png")
             elif "session=suspicious" in cookies:
