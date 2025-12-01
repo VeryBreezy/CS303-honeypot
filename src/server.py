@@ -5,7 +5,7 @@ import time
 
 
 def get_mac_from_ip(ip):
-    subprocess.getoutput(f"ping -c 1 -W 1 {ip}")
+    subprocess.getoutput(f"ping -c 1 -W 1 {ip}")  # Update ARP table
     time.sleep(0.1)
     arp_output = subprocess.getoutput(f"arp -n {ip}")
 
@@ -24,11 +24,18 @@ class HoneypotHandler(BaseHTTPRequestHandler):
         with open(filename, "rb") as f:
             self.wfile.write(f.read())
 
+    def filter_cookies(self, cookies):
+        """Hide username cookie from server logs"""
+        return "; ".join(
+            c for c in cookies.split(";") if not c.strip().startswith("username=")
+        )
+
     def do_GET(self):
         clean_path = self.path.split("?")[0]
         cookies = self.headers.get("Cookie", "")
+        clean_cookies = self.filter_cookies(cookies)
 
-        print(f"GET {clean_path} | Cookies={cookies}")
+        print(f"GET {clean_path} | Cookie={clean_cookies}")
 
         if clean_path == "/" or clean_path == "/website.html":
             self.send_response(200)
@@ -40,20 +47,20 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
         elif clean_path == "/account":
             if "session=valid" in cookies:
-                print("Victim checking account, show picture")
+                print("✔ Victim account access → Show picture")
                 self.send_response(200)
                 self.serve_file("account_picture.png", "image/png")
             elif "session=suspicious" in cookies:
-                print("⚠ Suspicious session, show alert")
+                print("⚠ Attacker account access → Trigger honeypot page")
                 self.send_response(200)
                 self.serve_file("suspicious.html")
             else:
-                print("No login session")
+                print("Account access without session")
                 self.send_response(200)
                 self.serve_file("access_denied.html")
 
         elif clean_path == "/logout":
-            print("Logout requested — cookie persists")
+            print("Logout clicked — session cookie persists")
             self.send_response(302)
             self.send_header("Location", "/website.html")
             self.end_headers()
@@ -75,16 +82,17 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/login":
-            # Read POST credentials
             length = int(self.headers["Content-Length"])
             creds = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
             username = creds.get("user", [""])[0]
             password = creds.get("pass", [""])[0]
+
             client_ip = self.client_address[0]
             client_mac = get_mac_from_ip(client_ip)
 
-            print(f"\n=== LOGIN ATTEMPT === | IP={client_ip} | MAC={client_mac}")
-
+            print(f"\n=== LOGIN ATTEMPT ===")
+            print(f"Username: {username}")
+            print(f"Password: {password}")
             authenticated = False
             is_real_victim = False
 
@@ -98,7 +106,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
             if authenticated:
                 session = "valid" if is_real_victim else "suspicious"
-                print(f" SESSION STATUS = {session}")
+                print(f"SESSION STATUS = {session}")
 
                 self.send_response(302)
                 self.send_header("Set-Cookie", f"session={session}; Path=/")
@@ -106,15 +114,13 @@ class HoneypotHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
             else:
-                print("Invalid login credentials")
+                print("Invalid credentials")
                 self.send_response(200)
                 self.serve_file("access_denied.html")
-
         else:
             self.send_error(404)
 
 
-# Server Startup
-print(" Honeypot Server running on port 8080...")
+print("Honeypot Server running on port 8080")
 server = HTTPServer(("0.0.0.0", 8080), HoneypotHandler)
 server.serve_forever()
