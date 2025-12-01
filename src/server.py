@@ -47,11 +47,11 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
         elif clean_path == "/account":
             if "session=valid" in cookies:
-                print("✔ Victim account access → Show picture")
+                print("Victim account access")
                 self.send_response(200)
                 self.serve_file("account_picture.png", "image/png")
             elif "session=suspicious" in cookies:
-                print("⚠ Attacker account access → Trigger honeypot page")
+                print("Attacker account access")
                 self.send_response(200)
                 self.serve_file("suspicious.html")
             else:
