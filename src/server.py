@@ -83,7 +83,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
             client_ip = self.client_address[0]
             client_mac = get_mac_from_ip(client_ip)
 
-            print(f"\n=== LOGIN ATTEMPT === {username} | IP={client_ip} | MAC={client_mac}")
+            print(f"\n=== LOGIN ATTEMPT === | IP={client_ip} | MAC={client_mac}")
 
             authenticated = False
             is_real_victim = False
@@ -101,7 +101,6 @@ class HoneypotHandler(BaseHTTPRequestHandler):
                 print(f" SESSION STATUS = {session}")
 
                 self.send_response(302)
-                self.send_header("Set-Cookie", f"username={username}; Path=/")
                 self.send_header("Set-Cookie", f"session={session}; Path=/")
                 self.send_header("Location", "/accepted.html")
                 self.end_headers()
