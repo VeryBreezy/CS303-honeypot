@@ -30,9 +30,9 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
         print(f"GET {clean_path} | Cookies={cookies}")
 
-        if clean_path == "/" or clean_path == "/fake_website.html":
+        if clean_path == "/" or clean_path == "/website.html":
             self.send_response(200)
-            self.serve_file("fake_website.html")
+            self.serve_file("website.html")
 
         elif clean_path == "/accepted.html":
             self.send_response(200)
@@ -40,22 +40,22 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
         elif clean_path == "/account":
             if "session=valid" in cookies:
-                print("✔ Victim checking account → show picture")
+                print("✔ Victim checking account, show picture")
                 self.send_response(200)
                 self.serve_file("account_picture.png", "image/png")
             elif "session=suspicious" in cookies:
-                print("⚠ Suspicious session → show alert")
+                print("⚠ Suspicious session, show alert")
                 self.send_response(200)
                 self.serve_file("suspicious.html")
             else:
-                print("❌ No login session")
+                print("No login session")
                 self.send_response(200)
                 self.serve_file("access_denied.html")
 
         elif clean_path == "/logout":
             print("Logout requested — cookie persists")
             self.send_response(302)
-            self.send_header("Location", "/fake_website.html")
+            self.send_header("Location", "/website.html")
             self.end_headers()
 
         elif clean_path == "/access_denied.html":
@@ -98,7 +98,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
 
             if authenticated:
                 session = "valid" if is_real_victim else "suspicious"
-                print(f"🎯 SESSION STATUS = {session}")
+                print(f" SESSION STATUS = {session}")
 
                 self.send_response(302)
                 self.send_header("Set-Cookie", f"username={username}; Path=/")
@@ -107,7 +107,7 @@ class HoneypotHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
             else:
-                print("❌ Invalid login credentials")
+                print("Invalid login credentials")
                 self.send_response(200)
                 self.serve_file("access_denied.html")
 
